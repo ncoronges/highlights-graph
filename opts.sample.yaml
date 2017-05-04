@@ -1,0 +1,4 @@
+--- 
+amzn_email: youremail@word.com
+amzn_password: pass
+mongo_url: mongodb://user:pass@host:port/db
