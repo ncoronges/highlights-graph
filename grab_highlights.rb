@@ -12,6 +12,9 @@ OptionParser.new do |opts|
     opts.on('-r', '--rebuild', 'Rebuild') do |v| 
       cmd_opts[:rebuild] = v 
     end
+    opts.on('-t', '--test', 'Test only') do |v| 
+      cmd_opts[:test] = v 
+    end
 end.parse!
 
 p cmd_opts
@@ -22,7 +25,7 @@ p cmd_opts
 puts "logging in #{options["amzn_email"]}.."
 
 kindle = KindleHighlights::Client.new(email_address: options["amzn_email"], password: options["amzn_password"])
-puts "loaded #{kindle.books.length}"
+puts "loaded #{kindle.book_items.length}"
 
 client = Mongo::Client.new(options["mongo_url"])
 puts "connected to mongo"
@@ -35,11 +38,13 @@ end
 collection = client[:books]
 collection.indexes.create_one({"asin": 1}, {unique: true})
 
-kindle.books.each do |key, value|
-    puts "asin #{key} title #{value}"
-    doc = {"asin":key, "title":value, "highlights":kindle.highlights_for(key) }
-    result = collection.insert_one(doc)
-    result.n
+kindle.book_items.each do |key, book|
+    puts "asin #{key} title #{book["title"]} author #{book["author"]}"
+    unless (cmd_opts[:test])
+        doc = {"asin":key, "title":book[:title], "author":book[:author] }
+        result = collection.insert_one(doc)
+        result.n
+    end
 end
 
 
