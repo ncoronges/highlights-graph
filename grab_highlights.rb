@@ -33,17 +33,26 @@ puts "connected to mongo"
 if (cmd_opts[:rebuild])
     puts "rebuild: clearing collections"
     client[:books].drop
+    client[:highlights].drop
 end
 
-collection = client[:books]
-collection.indexes.create_one({"asin": 1}, {unique: true})
+books_collection = client[:books]
+books_collection.indexes.create_one({"asin": 1}, {unique: true})
+highlights_collection = client[:highlights]
 
 kindle.book_items.each do |key, book|
-    puts "asin #{key} title #{book["title"]} author #{book["author"]}"
+    puts "asin #{key} title #{book[:title]} author #{book[:author]}"
     unless (cmd_opts[:test])
         doc = {"asin":key, "title":book[:title], "author":book[:author] }
-        result = collection.insert_one(doc)
+        result = books_collection.insert_one(doc)
         result.n
+        highlights = kindle.highlights_for(key)
+        for highlight in highlights 
+            highlight["title"]=book[:title]
+            highlight["author"]=book[:author]
+            result = highlights_collection.insert_one(highlight)
+            result.n
+        end
     end
 end
 
