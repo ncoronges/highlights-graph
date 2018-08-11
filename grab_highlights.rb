@@ -55,7 +55,7 @@ kindle.books.each { |book|
         highlights = kindle.highlights_for(book.asin)
         highlights.each { |highlight|
             doc = {"asin":book.asin, "title":book.title, "author":book.author, "highlight":highlight.text, "location":highlight.location}
-            puts "insert highlight for #{book.title} location #{highlight.location}"
+            puts "inserting highlight for #{book.title} location #{highlight.location}"
             result = highlights_collection.insert_one(doc)
             result.n
         }
