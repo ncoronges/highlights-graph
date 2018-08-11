@@ -1,4 +1,3 @@
-require 'bundler/setup'
 require 'kindle_highlights'
 require 'mongo'
 require 'yaml'
@@ -24,8 +23,15 @@ p cmd_opts
 
 puts "logging in #{options["amzn_email"]}.."
 
-kindle = KindleHighlights::Client.new(email_address: options["amzn_email"], password: options["amzn_password"])
-puts "loaded #{kindle.book_items.length}"
+kindle = KindleHighlights::Client.new(
+    email_address: options["amzn_email"], 
+    password: options["amzn_password"]
+)
+puts "loaded #{kindle.books.length}"
+if (kindle.books.length==0)
+    puts "no books to load"
+    exit
+end
 
 client = Mongo::Client.new(options["mongo_url"])
 puts "connected to mongo"
@@ -40,21 +46,21 @@ books_collection = client[:books]
 books_collection.indexes.create_one({"asin": 1}, {unique: true})
 highlights_collection = client[:highlights]
 
-kindle.book_items.each do |key, book|
-    puts "asin #{key} title #{book[:title]} author #{book[:author]}"
+kindle.books.each { |book|
+    puts "asin #{book.asin} title #{book.title} author #{book.author}"
     unless (cmd_opts[:test])
-        doc = {"asin":key, "title":book[:title], "author":book[:author] }
+        doc = {"asin":book.asin, "title":book.title, "author":book.author }
         result = books_collection.insert_one(doc)
         result.n
-        highlights = kindle.highlights_for(key)
-        for highlight in highlights 
-            highlight["title"]=book[:title]
-            highlight["author"]=book[:author]
-            result = highlights_collection.insert_one(highlight)
+        highlights = kindle.highlights_for(book.asin)
+        highlights.each { |highlight|
+            doc = {"asin":book.asin, "title":book.title, "author":book.author, "highlight":highlight.text, "location":highlight.location}
+            puts "insert highlight for #{book.title} location #{highlight.location}"
+            result = highlights_collection.insert_one(doc)
             result.n
-        end
+        }
     end
-end
+}
 
 
 
